@@ -8,13 +8,14 @@ using System.Linq;
 
 namespace GestorTipoCambio
 {
-    class Program
+       class Program
     {
         static Dictionary<DateTime, decimal> tipoCambioHistorico = new Dictionary<DateTime, decimal>();
         static decimal tipoCambioActual = 0;
 
         static void Main(string[] args)
         {
+            InicializarHistorico();
             while (true)
             {
                 Console.Clear();
@@ -26,7 +27,7 @@ namespace GestorTipoCambio
                 Console.WriteLine("5. Salir");
                 Console.Write("Seleccione una opción: ");
                 string opcion = Console.ReadLine();
-
+                
                 switch (opcion)
                 {
                     case "1":
@@ -91,6 +92,7 @@ namespace GestorTipoCambio
                     {
                         tipoCambioHistorico[fecha] = nuevoTipoCambio;
                         Console.WriteLine("Tipo de cambio actualizado correctamente.");
+                        
                     }
                     else
                     {
@@ -108,25 +110,36 @@ namespace GestorTipoCambio
             }
         }
 
+        // Método que muestra el tipo de cambio de los últimos 7 días
         static void MostrarTipoCambioHistorico()
         {
             Console.WriteLine("Tipo de cambio de los últimos 7 días:");
-            for (int i = 0; i < 7; i++)
+
+
+            foreach (var fecha in tipoCambioHistorico)
             {
-                DateTime fecha = DateTime.Today.AddDays(-i);
-                if (tipoCambioHistorico.TryGetValue(fecha, out decimal tipoCambio))
+
+                if (fecha.Value == 0)
                 {
-                    Console.WriteLine($"{fecha.ToShortDateString()}: {tipoCambio}");
+                    Console.WriteLine($"{fecha.Key.ToShortDateString()}: NA");
                 }
                 else
                 {
-                    Console.WriteLine($"{fecha.ToShortDateString()}: NA");
+                    Console.WriteLine($"{fecha.Key.ToShortDateString()}: {fecha.Value}");
                 }
             }
         }
+        static void InicializarHistorico()
+        {
+            DateTime fechaActual = DateTime.Today;
+            for (int i = 0; i < 7; i++)
+            {
+                tipoCambioHistorico[fechaActual.AddDays(-i)] = 0;
+            }
+            
+        }
     }
-} 
-
+}
                         // Es para Ordenar un toque, es temporal :)...
 **********************************************************************************
 
