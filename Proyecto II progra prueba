@@ -1,0 +1,37 @@
+
+// Proyecto 1 //
+// Progra II //
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main()
+    {
+        List<(DateTime Fecha, double Valor)> registros = new List<(DateTime, double)>();
+
+        Console.Write("¿Cada cuantos dias desea realizar el analisis? ");
+        int intervalo = int.Parse(Console.ReadLine());
+
+        for (int i = 0; i < 7; i++)
+        {
+            Console.Write($"Ingrese el tipo de cambio de compra para el dia {i + 1}: ");
+            registros.Add((DateTime.Now.AddDays(i), double.Parse(Console.ReadLine())));
+        }
+
+        for (int i = 0; i < registros.Count; i += intervalo)
+        {
+            var periodo = registros.Skip(i).Take(intervalo).ToList();
+            double promedio = periodo.Average(r => r.Valor);
+            var min = periodo.MinBy(r => r.Valor);
+            var max = periodo.MaxBy(r => r.Valor);
+
+            Console.WriteLine($"\nAnalisis del periodo {i + 1} - {Math.Min(i + intervalo, registros.Count)}:");
+            Console.WriteLine($"Promedio: {promedio:F2}");
+            Console.WriteLine($"Minimo: {min.Valor:F2} en {min.Fecha.ToShortDateString()}");
+            Console.WriteLine($"Maximo: {max.Valor:F2} en {max.Fecha.ToShortDateString()}");
+        }
+    }
+}
