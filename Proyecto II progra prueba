@@ -15,7 +15,7 @@ class Program
         Console.Write("¿Cada cuantos dias desea realizar el analisis? ");
         int intervalo = int.Parse(Console.ReadLine());
 
-        for (int i = 0; i < 7; i++)
+        for (int i = 0; i < 8; i++)
         {
             Console.Write($"Ingrese el tipo de cambio de compra para el dia {i + 1}: ");
             registros.Add((DateTime.Now.AddDays(i), double.Parse(Console.ReadLine())));
