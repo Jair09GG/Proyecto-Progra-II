@@ -11,6 +11,7 @@ namespace GestorTipoCambio
 
         static void Main(string[] args)
         {
+            Console.WriteLine("Iniciando programa..."); // Mensaje de inicio
             InicializarHistorico();
             while (true)
             {
@@ -43,6 +44,7 @@ namespace GestorTipoCambio
                         RealizarAnalisisTipoCambio();
                         break;
                     case "6":
+                        Console.WriteLine("Saliendo del programa...");
                         return;
                     default:
                         Console.WriteLine("Opción no válida. Intente de nuevo.");
@@ -55,6 +57,7 @@ namespace GestorTipoCambio
 
         static void MostrarTipoCambioActual()
         {
+            Console.WriteLine("Mostrando tipo de cambio actual...");
             Console.WriteLine(tipoCambioActual > 0
                 ? $"Tipo de cambio de compra del día: {tipoCambioActual}"
                 : "No se ha ingresado un tipo de cambio para el día.");
@@ -99,7 +102,7 @@ namespace GestorTipoCambio
 
         static void MostrarTipoCambioHistorico()
         {
-            Console.WriteLine("Tipo de cambio de los últimos 7 días:");
+            Console.WriteLine("Mostrando tipo de cambio de los últimos 7 días...");
             foreach (var fecha in tipoCambioHistorico)
             {
                 Console.WriteLine($"{fecha.Key.ToShortDateString()}: {(fecha.Value == 0 ? "NA" : fecha.Value.ToString())}");
@@ -108,6 +111,7 @@ namespace GestorTipoCambio
 
         static void InicializarHistorico()
         {
+            Console.WriteLine("Inicializando historial de tipo de cambio...");
             DateTime fechaActual = DateTime.Today;
             for (int i = 0; i < 7; i++)
             {
@@ -124,6 +128,7 @@ namespace GestorTipoCambio
                 dias = 7;
             }
 
+            Console.WriteLine("Generando datos de análisis...");
             Random random = new Random();
             Dictionary<DateTime, decimal> datos = new Dictionary<DateTime, decimal>();
             DateTime hoy = DateTime.Now;
