@@ -1,0 +1,210 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+namespace GestorTipoCambio
+{
+    class Program
+    {
+        static Dictionary<DateTime, decimal> tipoCambioHistorico = new Dictionary<DateTime, decimal>();
+        static decimal tipoCambioActual = 0;
+
+        static async Task Main(string[] args)
+        {
+            InicializarHistorico();
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("Gestor de Tipo de Cambio");
+                Console.WriteLine("1. Mostrar tipo de cambio de compra del día");
+                Console.WriteLine("2. Ingresar tipo de cambio del día");
+                Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos 7 días");
+                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 7 días");
+                Console.WriteLine("5. Análisis de tipo de cambio");
+                Console.WriteLine("6. Salir");
+                Console.Write("Seleccione una opción: ");
+                string opcion = Console.ReadLine();
+
+                switch (opcion)
+                {
+                    case "1":
+                        await MostrarTipoCambioActual();
+                        break;
+                    case "2":
+                        IngresarTipoCambioDelDia();
+                        break;
+                    case "3":
+                        ActualizarTipoCambio();
+                        break;
+                    case "4":
+                        MostrarTipoCambioHistorico();
+                        break;
+                    case "5":
+                        AnalizarTipoCambio();
+                        break;
+                    case "6":
+                        return;
+                    default:
+                        Console.WriteLine("Opción no válida. Intente de nuevo.");
+                        break;
+                }
+                Console.WriteLine("Presione cualquier tecla para continuar...");
+                Console.ReadKey();
+            }
+        }
+
+        static async Task MostrarTipoCambioActual()
+        {
+            try
+            {
+
+                tipoCambioActual = await ObtenerTipoCambioDeAPI();
+
+
+                if (tipoCambioActual > 0)
+                {
+
+                    Console.WriteLine($"Tipo de cambio de compra del día: {tipoCambioActual}");
+                }
+                else
+                {
+
+                    Console.WriteLine("Datos del Ministerio de Hacienda de Costa Rica a día de hoy");
+                }
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine($"Error al mostrar el tipo de cambio: {ex.Message}");
+            }
+        }
+
+        static async Task<decimal> ObtenerTipoCambioDeAPI()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                try
+                {
+                    string url = "https://api.hacienda.go.cr/indicadores/tc";
+                    HttpResponseMessage response = await client.GetAsync(url);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                        Console.WriteLine($"Respuesta JSON: {jsonResponse}");
+
+
+                        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonResponse);
+
+
+                        if (data.ContainsKey("venta"))
+                        {
+
+                            return Convert.ToDecimal(data["venta"]);
+                        }
+                        else
+                        {
+                            Console.WriteLine("");
+                            return 0;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error al obtener datos. Código de estado HTTP: {response.StatusCode}");
+                        return 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al obtener los datos: {ex.Message}");
+                    return 0;
+                }
+            }
+        }
+
+        static void IngresarTipoCambioDelDia()
+        {
+            Console.Write("Ingrese el tipo de cambio de compra del día: ");
+            if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambio))
+            {
+                tipoCambioActual = nuevoTipoCambio;
+                tipoCambioHistorico[DateTime.Today] = nuevoTipoCambio;
+                Console.WriteLine("Tipo de cambio ingresado correctamente.");
+            }
+            else
+            {
+                Console.WriteLine("Valor no válido. Intente de nuevo.");
+            }
+        }
+
+        static void ActualizarTipoCambio()
+        {
+            Console.Write("Ingrese la fecha (formato: dd/MM/yyyy) del tipo de cambio a actualizar: ");
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime fecha) && tipoCambioHistorico.ContainsKey(fecha))
+            {
+                Console.Write("Ingrese el nuevo tipo de cambio: ");
+                if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambio))
+                {
+                    tipoCambioHistorico[fecha] = nuevoTipoCambio;
+                    Console.WriteLine("Tipo de cambio actualizado correctamente.");
+                }
+                else
+                {
+                    Console.WriteLine("Valor no válido. Intente de nuevo.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Fecha no válida o no registrada.");
+            }
+        }
+
+        static void MostrarTipoCambioHistorico()
+        {
+            Console.WriteLine("Tipo de cambio de los últimos 7 días:");
+            foreach (var fecha in tipoCambioHistorico)
+            {
+                Console.WriteLine($"{fecha.Key.ToShortDateString()}: {fecha.Value}");
+            }
+        }
+
+        static void InicializarHistorico()
+        {
+            DateTime fechaActual = DateTime.Today;
+            for (int i = 0; i < 7; i++)
+            {
+                tipoCambioHistorico[fechaActual.AddDays(-i)] = 0;
+            }
+        }
+
+        static void AnalizarTipoCambio()
+        {
+            Console.Write("¿Cada cuántos días desea realizar el análisis? ");
+            if (!int.TryParse(Console.ReadLine(), out int intervalo) || intervalo <= 0)
+            {
+                Console.WriteLine("Intervalo no válido.");
+                return;
+            }
+
+            var registros = tipoCambioHistorico.Select(r => (r.Key, r.Value)).OrderBy(r => r.Key).ToList();
+            for (int i = 0; i < registros.Count; i += intervalo)
+            {
+                var periodo = registros.Skip(i).Take(intervalo).ToList();
+                double promedio = periodo.Average(r => (double)r.Value);
+                var min = periodo.OrderBy(r => r.Value).First();
+                var max = periodo.OrderByDescending(r => r.Value).First();
+
+
+                Console.WriteLine($"\nAnálisis del periodo {i + 1} - {Math.Min(i + intervalo, registros.Count)}:");
+                Console.WriteLine($"Promedio: {promedio:F2}");
+                Console.WriteLine($"Mínimo: {min.Value:F2} en {min.Key.ToShortDateString()}");
+                Console.WriteLine($"Máximo: {max.Value:F2} en {max.Key.ToShortDateString()}");
+            }
+        }
+    }
+}
