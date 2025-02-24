@@ -1,14 +1,10 @@
-
-// Proyecto 1 //
-// Progra II //
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace GestorTipoCambio
 {
-       class Program
+    class Program
     {
         static Dictionary<DateTime, decimal> tipoCambioHistorico = new Dictionary<DateTime, decimal>();
         static decimal tipoCambioActual = 0;
@@ -24,10 +20,11 @@ namespace GestorTipoCambio
                 Console.WriteLine("2. Ingresar tipo de cambio del día");
                 Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos 7 días");
                 Console.WriteLine("4. Mostrar tipo de cambio de los últimos 7 días");
-                Console.WriteLine("5. Salir");
+                Console.WriteLine("5. Realizar análisis de tipo de cambio");
+                Console.WriteLine("6. Salir");
                 Console.Write("Seleccione una opción: ");
                 string opcion = Console.ReadLine();
-                
+
                 switch (opcion)
                 {
                     case "1":
@@ -43,6 +40,9 @@ namespace GestorTipoCambio
                         MostrarTipoCambioHistorico();
                         break;
                     case "5":
+                        RealizarAnalisisTipoCambio();
+                        break;
+                    case "6":
                         return;
                     default:
                         Console.WriteLine("Opción no válida. Intente de nuevo.");
@@ -55,14 +55,9 @@ namespace GestorTipoCambio
 
         static void MostrarTipoCambioActual()
         {
-            if (tipoCambioActual > 0)
-            {
-                Console.WriteLine($"Tipo de cambio de compra del día: {tipoCambioActual}");
-            }
-            else
-            {
-                Console.WriteLine("No se ha ingresado un tipo de cambio para el día.");
-            }
+            Console.WriteLine(tipoCambioActual > 0
+                ? $"Tipo de cambio de compra del día: {tipoCambioActual}"
+                : "No se ha ingresado un tipo de cambio para el día.");
         }
 
         static void IngresarTipoCambioDelDia()
@@ -83,52 +78,34 @@ namespace GestorTipoCambio
         static void ActualizarTipoCambio()
         {
             Console.Write("Ingrese la fecha (formato: dd/MM/yyyy) del tipo de cambio a actualizar: ");
-            if (DateTime.TryParse(Console.ReadLine(), out DateTime fecha))
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime fecha) && tipoCambioHistorico.ContainsKey(fecha))
             {
-                if (tipoCambioHistorico.ContainsKey(fecha))
+                Console.Write("Ingrese el nuevo tipo de cambio: ");
+                if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambio))
                 {
-                    Console.Write("Ingrese el nuevo tipo de cambio: ");
-                    if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambio))
-                    {
-                        tipoCambioHistorico[fecha] = nuevoTipoCambio;
-                        Console.WriteLine("Tipo de cambio actualizado correctamente.");
-                        
-                    }
-                    else
-                    {
-                        Console.WriteLine("Valor no válido. Intente de nuevo.");
-                    }
+                    tipoCambioHistorico[fecha] = nuevoTipoCambio;
+                    Console.WriteLine("Tipo de cambio actualizado correctamente.");
                 }
                 else
                 {
-                    Console.WriteLine("No hay registro para esa fecha. Intente de nuevo.");
+                    Console.WriteLine("Valor no válido. Intente de nuevo.");
                 }
             }
             else
             {
-                Console.WriteLine("Fecha no válida. Intente de nuevo.");
+                Console.WriteLine("Fecha no válida o sin registro. Intente de nuevo.");
             }
         }
 
-        // Método que muestra el tipo de cambio de los últimos 7 días
         static void MostrarTipoCambioHistorico()
         {
             Console.WriteLine("Tipo de cambio de los últimos 7 días:");
-
-
             foreach (var fecha in tipoCambioHistorico)
             {
-
-                if (fecha.Value == 0)
-                {
-                    Console.WriteLine($"{fecha.Key.ToShortDateString()}: NA");
-                }
-                else
-                {
-                    Console.WriteLine($"{fecha.Key.ToShortDateString()}: {fecha.Value}");
-                }
+                Console.WriteLine($"{fecha.Key.ToShortDateString()}: {(fecha.Value == 0 ? "NA" : fecha.Value.ToString())}");
             }
         }
+
         static void InicializarHistorico()
         {
             DateTime fechaActual = DateTime.Today;
@@ -136,39 +113,45 @@ namespace GestorTipoCambio
             {
                 tipoCambioHistorico[fechaActual.AddDays(-i)] = 0;
             }
-            
-        }
-    }
-}
-                        // Es para Ordenar un toque, es temporal :)...
-**********************************************************************************
-
-class Program
-{
-    static void Main()
-    {
-        List<(DateTime Fecha, double Valor)> registros = new List<(DateTime, double)>();
-
-        Console.Write("¿Cada cuantos dias desea realizar el analisis? ");
-        int intervalo = int.Parse(Console.ReadLine());
-
-        for (int i = 0; i < 8; i++)
-        {
-            Console.Write($"Ingrese el tipo de cambio de compra para el dia {i + 1}: ");
-            registros.Add((DateTime.Now.AddDays(i), double.Parse(Console.ReadLine())));
         }
 
-        for (int i = 0; i < registros.Count; i += intervalo)
+        static void RealizarAnalisisTipoCambio()
         {
-            var periodo = registros.Skip(i).Take(intervalo).ToList();
-            double promedio = periodo.Average(r => r.Valor);
-            var min = periodo.MinBy(r => r.Valor);
-            var max = periodo.MaxBy(r => r.Valor);
+            Console.Write("Ingrese el número de días a analizar: ");
+            if (!int.TryParse(Console.ReadLine(), out int dias) || dias <= 0)
+            {
+                Console.WriteLine("Número de días no válido. Usando 7 por defecto.");
+                dias = 7;
+            }
 
-            Console.WriteLine($"\nAnalisis del periodo {i + 1} - {Math.Min(i + intervalo, registros.Count)}:");
-            Console.WriteLine($"Promedio: {promedio:F2}");
-            Console.WriteLine($"Minimo: {min.Valor:F2} en {min.Fecha.ToShortDateString()}");
-            Console.WriteLine($"Maximo: {max.Valor:F2} en {max.Fecha.ToShortDateString()}");
+            Random random = new Random();
+            Dictionary<DateTime, decimal> datos = new Dictionary<DateTime, decimal>();
+            DateTime hoy = DateTime.Now;
+
+            for (int i = 0; i < dias; i++)
+            {
+                DateTime fecha = hoy.AddDays(-i);
+                decimal tipoCambio = Math.Round((decimal)(random.NextDouble() * (20.0 - 18.0) + 18.0), 2);
+                datos[fecha] = tipoCambio;
+            }
+
+            decimal promedio = datos.Values.Average();
+            decimal minimo = datos.Values.Min();
+            decimal maximo = datos.Values.Max();
+            DateTime fechaMinimo = datos.FirstOrDefault(x => x.Value == minimo).Key;
+            DateTime fechaMaximo = datos.FirstOrDefault(x => x.Value == maximo).Key;
+
+            Console.WriteLine($"\nTipo de cambio promedio: {promedio:F2}");
+            Console.WriteLine($"Tipo de cambio más bajo: {minimo:F2} en {fechaMinimo.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más alto: {maximo:F2} en {fechaMaximo.ToShortDateString()}");
+
+            Console.WriteLine("\nDiferencias en el tipo de cambio con respecto al día anterior:");
+            var fechas = datos.Keys.ToList();
+            for (int i = 1; i < fechas.Count; i++)
+            {
+                decimal diferencia = datos[fechas[i]] - datos[fechas[i - 1]];
+                Console.WriteLine($"Diferencia del {fechas[i].ToShortDateString()}: {diferencia:F2}");
+            }
         }
     }
 }
