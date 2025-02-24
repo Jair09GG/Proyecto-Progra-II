@@ -205,6 +205,13 @@ namespace GestorTipoCambio
                 Console.WriteLine($"Mínimo: {min.Value:F2} en {min.Key.ToShortDateString()}");
                 Console.WriteLine($"Máximo: {max.Value:F2} en {max.Key.ToShortDateString()}");
             }
+            Console.WriteLine("\nDiferencia en el tipo de cambio con respecto al día anterior:");
+            for (int i = 1; i < registros.Count; i++)
+            {
+                decimal diferencia = registros[i].Value - registros[i - 1].Value;
+                Console.WriteLine($"{registros[i].Key.ToShortDateString()}: {diferencia:F2}");
+            }
         }
     }
+    
 }
