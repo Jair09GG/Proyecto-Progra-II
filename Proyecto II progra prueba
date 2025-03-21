@@ -22,7 +22,8 @@ namespace GestorTipoCambio
                 Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos 7 días");
                 Console.WriteLine("4. Mostrar tipo de cambio de los últimos 7 días");
                 Console.WriteLine("5. Realizar análisis de tipo de cambio");
-                Console.WriteLine("6. Salir");
+                Console.WriteLine("6. Análisis trimestral de tipo de cambio");
+                Console.WriteLine("7. Salir"
                 Console.Write("Seleccione una opción: ");
                 string opcion = Console.ReadLine();
 
@@ -44,6 +45,9 @@ namespace GestorTipoCambio
                         RealizarAnalisisTipoCambio();
                         break;
                     case "6":
+                        AnalizarTipoCambioTrimestral();
+                        break;
+                    case "7":
                         Console.WriteLine("Saliendo del programa...");
                         return;
                     default:
@@ -118,6 +122,32 @@ namespace GestorTipoCambio
                 tipoCambioHistorico[fechaActual.AddDays(-i)] = 0;
             }
         }
+
+ static void AnalizarTipoCambioTrimestral()
+            {
+                var registrosTrimestrales = tipoCambioHistorico
+                    .Where(r => r.Key >= DateTime.Now.AddMonths(-3))
+                    .Select(r => (r.Key, r.Value))
+                    .OrderBy(r => r.Key)
+                    .ToList();
+
+                if (!registrosTrimestrales.Any())
+                {
+                    Console.WriteLine("No hay datos disponibles para el análisis trimestral.");
+                    return;
+                }
+
+                double promedioCompra = registrosTrimestrales.Average(r => (double)r.Value.compra);
+                double promedioVenta = registrosTrimestrales.Average(r => (double)r.Value.venta);
+                var minimoCompra = registrosTrimestrales.OrderBy(r => r.Value.compra).First();
+                var minimoVenta = registrosTrimestrales.OrderBy(r => r.Value.venta).First();
+
+                Console.WriteLine($"\nAnálisis Trimestral:");
+                Console.WriteLine($"Promedio Compra: {promedioCompra:F2}");
+                Console.WriteLine($"Promedio Venta: {promedioVenta:F2}");
+                Console.WriteLine($"Mínimo Compra: {minimoCompra.Value.compra:F2} en {minimoCompra.Key.ToShortDateString()}");
+                Console.WriteLine($"Mínimo Venta: {minimoVenta.Value.venta:F2} en {minimoVenta.Key.ToShortDateString()}");
+            }
 
         static void RealizarAnalisisTipoCambio()
         {
