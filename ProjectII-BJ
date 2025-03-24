@@ -1,0 +1,197 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using ScottPlot;
+//Esta parte es solo la parte de Jahir y Brayner combinadas, lo mejor seria que vayan anadiendo sus partes en este
+namespace GestorTipoCambio
+{
+    class Program
+    {
+        static Dictionary<DateTime, (decimal compra, decimal venta)> tipoCambioHistorico = new Dictionary<DateTime, (decimal, decimal)>();
+        static (decimal compra, decimal venta) tipoCambioActual = (0, 0);
+        static Random rand = new Random();
+        static void Main()
+        {
+            InicializarHistorico();
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("Gestor de Tipo de Cambio");
+                Console.WriteLine("1. Mostrar tipo de cambio de compra y venta del día");
+                Console.WriteLine("2. Ingresar tipo de cambio del día");
+                Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos (x) días");
+                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 7 días");
+                Console.WriteLine("5. Realizar análisis de tipo de cambio");
+                Console.WriteLine("6. Análisis trimestral de tipo de cambio");
+                Console.WriteLine("7. Generar gráfico de tipo de cambio");
+                Console.WriteLine("8. Salir");
+                Console.Write("Seleccione una opción: ");
+                string opcion = Console.ReadLine();
+
+                switch (opcion)
+                {
+                    case "1": MostrarTipoCambioActual(); break;
+                    case "2": IngresarTipoCambioDelDia(); break;
+                    case "3": ActualizarTipoCambio(); break;
+                    case "4": MostrarTipoCambioHistorico(); break;
+                    case "5": RealizarAnalisisTipoCambio(); break;
+                    case "6": AnalizarTipoCambioTrimestral(); break;
+                    case "7": GenerarGrafico(); break;
+                    case "8": Console.WriteLine("Saliendo del programa..."); return;
+                    default: Console.WriteLine("Opción no válida. Intente de nuevo."); break;
+                }
+                Console.WriteLine("Presione cualquier tecla para continuar...");
+                Console.ReadKey();
+            }
+        }
+
+        static void MostrarTipoCambioActual()
+        {
+            Console.WriteLine(tipoCambioActual.compra > 0
+                ? $"Tipo de cambio de compra del día: {tipoCambioActual.compra}\nTipo de cambio de venta del día: {tipoCambioActual.venta}"
+                : "No se ha ingresado un tipo de cambio para el día.");
+        }
+
+        static void IngresarTipoCambioDelDia()
+        {
+            Console.Write("Ingrese el tipo de cambio de compra: ");
+            if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambioCompra))
+            {
+                Console.Write("Ingrese el tipo de cambio de venta: ");
+                if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambioVenta))
+                {
+                    tipoCambioActual = (nuevoTipoCambioCompra, nuevoTipoCambioVenta);
+                    tipoCambioHistorico[DateTime.Today] = (nuevoTipoCambioCompra, nuevoTipoCambioVenta);
+                    Console.WriteLine("Tipo de cambio ingresado correctamente.");
+                }
+                else
+                {
+                    Console.WriteLine("Valor de venta inválido. Intente de nuevo.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Valor de compra inválido. Intente de nuevo.");
+            }
+        }
+
+
+        static void ActualizarTipoCambio()
+        {
+            Console.Write("Ingrese la fecha (formato: dd/MM/yyyy) del tipo de cambio a actualizar: ");
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime fecha) && tipoCambioHistorico.ContainsKey(fecha))
+            {
+                Console.Write("Ingrese el nuevo tipo de cambio de compra: ");
+                if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambioCompra))
+                {
+                    Console.Write("Ingrese el nuevo tipo de cambio de venta: ");
+                    if (decimal.TryParse(Console.ReadLine(), out decimal nuevoTipoCambioVenta))
+                    {
+                        tipoCambioHistorico[fecha] = (nuevoTipoCambioCompra, nuevoTipoCambioVenta);
+                        Console.WriteLine("Tipo de cambio actualizado correctamente.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Valor de venta inválido. Intente de nuevo.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Valor de compra inválido. Intente de nuevo.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Fecha inválida o sin registro. Intente de nuevo.");
+            }
+        }
+
+        static void MostrarTipoCambioHistorico()
+        {
+            Console.WriteLine("Mostrando tipo de cambio de los últimos 7 días...");
+            foreach (var fecha in tipoCambioHistorico.OrderByDescending(d => d.Key).Take(7))
+            {
+                Console.WriteLine($"{fecha.Key.ToShortDateString()}: Compra: {fecha.Value.compra:F2}, Venta: {fecha.Value.venta:F2}");
+            }
+        }
+
+        static void InicializarHistorico()
+        {
+            DateTime fechaActual = DateTime.Today;
+            for (int i = 0; i < 90; i++)
+            {
+                tipoCambioHistorico[fechaActual.AddDays(-i)] = (GenerarDato(), GenerarDato());
+            }
+        }
+
+        static decimal GenerarDato()
+        {
+            return Math.Round((decimal)(rand.NextDouble() * (600 - 400) + 400), 2);
+        }
+
+        static void GenerarGrafico()
+        {
+            Console.WriteLine("Generando gráfico de tipo de cambio...");
+            List<double> valoresCompra = tipoCambioHistorico.OrderBy(d => d.Key).Select(d => (double)d.Value.compra).ToList();
+            List<double> valoresVenta = tipoCambioHistorico.OrderBy(d => d.Key).Select(d => (double)d.Value.venta).ToList();
+            var plt = new ScottPlot.Plot(600, 400);
+            plt.AddSignal(valoresCompra.ToArray(), label: "Compra");
+            plt.AddSignal(valoresVenta.ToArray(), label: "Venta");
+            plt.Legend();
+            plt.SaveFig("tipo_cambio.png");
+            Console.WriteLine("Gráfico guardado como tipo_cambio.png");
+        }
+
+        static void RealizarAnalisisTipoCambio()
+        {
+            Console.Write("Ingrese el número de días a analizar: ");
+            if (!int.TryParse(Console.ReadLine(), out int dias) || dias <= 0)
+            {
+                Console.WriteLine("Número de días no válido. Usando 7 por defecto.");
+                dias = 7;
+            }
+
+            var datos = tipoCambioHistorico.OrderByDescending(d => d.Key).Take(dias).ToList();
+            decimal promedioCompra = datos.Average(d => d.Value.compra);
+            decimal promedioVenta = datos.Average(d => d.Value.venta);
+            decimal minimoCompra = datos.Min(d => d.Value.compra);
+            decimal maximoCompra = datos.Max(d => d.Value.compra);
+            decimal minimoVenta = datos.Min(d => d.Value.venta);
+            decimal maximoVenta = datos.Max(d => d.Value.venta);
+            DateTime fechaMinimoCompra = datos.First(d => d.Value.compra == minimoCompra).Key;
+            DateTime fechaMaximoCompra = datos.First(d => d.Value.compra == maximoCompra).Key;
+            DateTime fechaMinimoVenta = datos.First(d => d.Value.venta == minimoVenta).Key;
+            DateTime fechaMaximoVenta = datos.First(d => d.Value.venta == maximoVenta).Key;
+
+            Console.WriteLine($"\nTipo de cambio promedio compra: {promedioCompra:F2}");
+            Console.WriteLine($"Tipo de cambio promedio venta: {promedioVenta:F2}");
+            Console.WriteLine($"Tipo de cambio más bajo compra: {minimoCompra:F2} en {fechaMinimoCompra.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más alto compra: {maximoCompra:F2} en {fechaMaximoCompra.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más bajo venta: {minimoVenta:F2} en {fechaMinimoVenta.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más alto venta: {maximoVenta:F2} en {fechaMaximoVenta.ToShortDateString()}");
+        }
+
+        static void AnalizarTipoCambioTrimestral()
+        {
+            var registrosTrimestrales = tipoCambioHistorico.Where(r => r.Key >= DateTime.Now.AddMonths(-3)).ToList();
+            if (!registrosTrimestrales.Any())
+            {
+                Console.WriteLine("No hay datos disponibles para el análisis trimestral.");
+                return;
+            }
+
+            decimal promedioCompra = registrosTrimestrales.Average(r => r.Value.compra);
+            decimal promedioVenta = registrosTrimestrales.Average(r => r.Value.venta);
+            decimal minCompra = registrosTrimestrales.Min(r => r.Value.compra);
+            decimal maxCompra = registrosTrimestrales.Max(r => r.Value.compra);
+            decimal minVenta = registrosTrimestrales.Min(r => r.Value.venta);
+            decimal maxVenta = registrosTrimestrales.Max(r => r.Value.venta);
+
+            Console.WriteLine($"\nAnálisis Trimestral:");
+            Console.WriteLine($"Promedio Compra: {promedioCompra:F2}");
+            Console.WriteLine($"Promedio Venta: {promedioVenta:F2}");
+            Console.WriteLine($"Mínimo Compra: {minCompra:F2}, Máximo Compra: {maxCompra:F2}");
+            Console.WriteLine($"Mínimo Venta: {minVenta:F2}, Máximo Venta: {maxVenta:F2}");
+        }
+    }
+}
