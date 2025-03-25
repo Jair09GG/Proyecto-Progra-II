@@ -20,7 +20,7 @@ namespace GestorTipoCambio
                 Console.WriteLine("1. Mostrar tipo de cambio de compra y venta del día");
                 Console.WriteLine("2. Ingresar tipo de cambio del día");
                 Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos (x) días");
-                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 7 días");
+                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 30 días");
                 Console.WriteLine("5. Realizar análisis de tipo de cambio");
                 Console.WriteLine("6. Análisis trimestral de tipo de cambio");
                 Console.WriteLine("7. Generar gráfico de tipo de cambio");
@@ -107,8 +107,8 @@ namespace GestorTipoCambio
 
         static void MostrarTipoCambioHistorico()
         {
-            Console.WriteLine("Mostrando tipo de cambio de los últimos 7 días...");
-            foreach (var fecha in tipoCambioHistorico.OrderByDescending(d => d.Key).Take(7))
+            Console.WriteLine("Mostrando tipo de cambio de los últimos 30 días...");
+            foreach (var fecha in tipoCambioHistorico.OrderByDescending(d => d.Key).Take(30))
             {
                 Console.WriteLine($"{fecha.Key.ToShortDateString()}: Compra: {fecha.Value.compra:F2}, Venta: {fecha.Value.venta:F2}");
             }
