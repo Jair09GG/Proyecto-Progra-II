@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ScottPlot;
+using System.IO;
+using ExcelDataReader;
 
 namespace GestorTipoCambio
 {
@@ -123,8 +125,37 @@ namespace GestorTipoCambio
                     case "9": Console.WriteLine("Saliendo del programa..."); return;
                     default: Console.WriteLine("Opción no válida. Intente de nuevo."); break;
                 }
+
                 Console.WriteLine("Presione cualquier tecla para continuar...");
                 Console.ReadKey();
+            }
+        }
+
+        static void CargarDatosDesdeExcel(string ruta)
+        {
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+            try
+            {
+                using var stream = File.Open(ruta, FileMode.Open, FileAccess.Read);
+                using var reader = ExcelReaderFactory.CreateReader(stream);
+
+                while (reader.Read())
+                {
+                    if (reader.Depth == 0) continue; // Saltar encabezado
+                    if (DateTime.TryParse(reader.GetValue(0)?.ToString(), out DateTime fecha) &&
+                        decimal.TryParse(reader.GetValue(1)?.ToString(), out decimal compra) &&
+                        decimal.TryParse(reader.GetValue(2)?.ToString(), out decimal venta))
+                    {
+                        tipoCambioHistorico[fecha] = (compra, venta);
+                    }
+                }
+
+                Console.WriteLine("Datos cargados correctamente desde Excel.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al leer el archivo Excel: {ex.Message}");
             }
         }
 
@@ -254,13 +285,13 @@ namespace GestorTipoCambio
 
                 Console.Write("Ingrese la fecha de fin (formato: dd/MM/yyyy): ");
                 if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaFin))
-                    throw new FormatException("Fecha fin incorrecta");
+                    throw new FormatException("Fecha de fin inválida.");
 
                 if (fechaFin < fechaInicio)
-                    throw new ArgumentException("Porfavor que la fecha de fin sea posterior a la fecha de inicio");
+                    throw new ArgumentException("La fecha de fin debe ser posterior a la fecha de inicio.");
 
                 if ((fechaFin - fechaInicio).TotalDays > 365 * 11)
-                    throw new RangoFechaInvalidoException("El rango de fechas debe ser menor a los 11 años");
+                    throw new RangoFechaInvalidoException("El rango de fechas no puede exceder los 11 años.");
 
                 var datosEnRango = tipoCambioHistorico
                     .Where(d => d.Key >= fechaInicio && d.Key <= fechaFin)
@@ -268,7 +299,7 @@ namespace GestorTipoCambio
 
                 if (!datosEnRango.Any())
                 {
-                    Console.WriteLine("estos datos no estan disponibles en el rango de fechas indicado");
+                    Console.WriteLine("No hay datos disponibles en el rango de fechas indicado.");
                     return;
                 }
 
