@@ -5,6 +5,12 @@ using ScottPlot;
 
 namespace GestorTipoCambio
 {
+    // Excepción personalizada para rango de fechas inválido
+    public class RangoFechaInvalidoException : Exception
+    {
+        public RangoFechaInvalidoException(string mensaje) : base(mensaje) { }
+    }
+
     abstract class AnalisisTipoCambio
     {
         protected Dictionary<DateTime, (decimal compra, decimal venta)> tipoCambioHistorico;
@@ -21,7 +27,7 @@ namespace GestorTipoCambio
     {
         private int dias;
 
-        public AnalisisDiario(Dictionary<DateTime, (decimal compra, decimal venta)> historico, int dias) 
+        public AnalisisDiario(Dictionary<DateTime, (decimal compra, decimal venta)> historico, int dias)
             : base(historico)
         {
             this.dias = dias;
@@ -52,7 +58,7 @@ namespace GestorTipoCambio
 
     class AnalisisTrimestral : AnalisisTipoCambio
     {
-        public AnalisisTrimestral(Dictionary<DateTime, (decimal compra, decimal venta)> historico) 
+        public AnalisisTrimestral(Dictionary<DateTime, (decimal compra, decimal venta)> historico)
             : base(historico) { }
 
         public override void RealizarAnalisis()
@@ -82,8 +88,9 @@ namespace GestorTipoCambio
     class Program
     {
         static Dictionary<DateTime, (decimal compra, decimal venta)> tipoCambioHistorico = new Dictionary<DateTime, (decimal, decimal)>();
-        static (decimal compra, decimal venta) tipoCambioActual = (0, 0 );
+        static (decimal compra, decimal venta) tipoCambioActual = (0, 0);
         static Random rand = new Random();
+
         static void Main()
         {
             InicializarHistorico();
@@ -239,37 +246,56 @@ namespace GestorTipoCambio
 
         static void AnalizarTipoCambioEnRangoFechas()
         {
-            Console.Write("Ingrese la fecha de inicio (formato: dd/MM/yyyy): ");
-            if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaInicio))
+            try
             {
-                Console.WriteLine("Fecha de inicio inválida. Intente de nuevo.");
-                return;
-            }
+                Console.Write("Ingrese la fecha de inicio (formato: dd/MM/yyyy): ");
+                if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaInicio))
+                    throw new FormatException("Fecha de inicio inválida.");
 
-            Console.Write("Ingrese la fecha de fin (formato: dd/MM/yyyy): ");
-            if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaFin) || fechaFin < fechaInicio)
+                Console.Write("Ingrese la fecha de fin (formato: dd/MM/yyyy): ");
+                if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaFin))
+                    throw new FormatException("Fecha fin incorrecta");
+
+                if (fechaFin < fechaInicio)
+                    throw new ArgumentException("Porfavor que la fecha de fin sea posterior a la fecha de inicio");
+
+                if ((fechaFin - fechaInicio).TotalDays > 365 * 11)
+                    throw new RangoFechaInvalidoException("El rango de fechas debe ser menor a los 11 años");
+
+                var datosEnRango = tipoCambioHistorico
+                    .Where(d => d.Key >= fechaInicio && d.Key <= fechaFin)
+                    .ToList();
+
+                if (!datosEnRango.Any())
+                {
+                    Console.WriteLine("estos datos no estan disponibles en el rango de fechas indicado");
+                    return;
+                }
+
+                decimal promedioVenta = datosEnRango.Average(d => d.Value.venta);
+                decimal minimoVenta = datosEnRango.Min(d => d.Value.venta);
+                DateTime fechaMinimoVenta = datosEnRango.First(d => d.Value.venta == minimoVenta).Key;
+
+                Console.WriteLine($"\nAnálisis de tipo de cambio en el rango de fechas:");
+                Console.WriteLine($"Promedio de tipo de cambio de venta: {promedioVenta:F2}");
+                Console.WriteLine($"Tipo de cambio de venta más bajo: {minimoVenta:F2} en {fechaMinimoVenta.ToShortDateString()}");
+            }
+            catch (FormatException ex)
             {
-                Console.WriteLine("Fecha de fin inválida. Debe ser mayor o igual a la fecha de inicio.");
-                return;
+                Console.WriteLine($"Error de formato: {ex.Message}");
             }
-
-            var datosEnRango = tipoCambioHistorico
-                .Where(d => d.Key >= fechaInicio && d.Key <= fechaFin)
-                .ToList();
-
-            if (!datosEnRango.Any())
+            catch (ArgumentException ex)
             {
-                Console.WriteLine("No hay datos disponibles en el rango de fechas indicado.");
-                return;
+                Console.WriteLine($"Error: {ex.Message}");
             }
-
-            decimal promedioVenta = datosEnRango.Average(d => d.Value.venta);
-            decimal minimoVenta = datosEnRango.Min(d => d.Value.venta);
-            DateTime fechaMinimoVenta = datosEnRango.First(d => d.Value.venta == minimoVenta).Key;
-
-            Console.WriteLine($"\nAnálisis de tipo de cambio en el rango de fechas:");
-            Console.WriteLine($"Promedio de tipo de cambio de venta: {promedioVenta:F2}");
-            Console.WriteLine($"Tipo de cambio de venta más bajo: {minimoVenta:F2} en {fechaMinimoVenta.ToShortDateString()}");
+            catch (RangoFechaInvalidoException ex)
+            {
+                Console.WriteLine($"Rango inválido: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ha ocurrido un error inesperado: {ex.Message}");
+            }
         }
     }
 }
