@@ -1,0 +1,309 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using ScottPlot;
+using System.IO;
+using ExcelDataReader;
+using System.Diagnostics;
+using System.Xml.Linq;
+using System.Text;
+using System.Globalization;
+
+namespace GestorTipoCambio
+{
+    // Excepción personalizada para rango de fechas inválido
+    public class RangoFechaInvalidoException : Exception
+    {
+        public RangoFechaInvalidoException(string mensaje) : base(mensaje) { }
+    }
+
+    abstract class AnalisisTipoCambio
+    {
+        protected Dictionary<DateTime, (decimal compra, decimal venta)> tipoCambioHistorico;
+
+        public AnalisisTipoCambio(Dictionary<DateTime, (decimal compra, decimal venta)> historico)
+        {
+            tipoCambioHistorico = historico;
+        }
+
+        public abstract void RealizarAnalisis();
+    }
+
+    class AnalisisDiario : AnalisisTipoCambio
+    {
+        private int dias;
+
+        public AnalisisDiario(Dictionary<DateTime, (decimal compra, decimal venta)> historico, int dias)
+            : base(historico)
+        {
+            this.dias = dias;
+        }
+
+        public override void RealizarAnalisis()
+        {
+            var datos = tipoCambioHistorico.OrderByDescending(d => d.Key).Take(dias).ToList();
+            decimal promedioCompra = datos.Average(d => d.Value.compra);
+            decimal promedioVenta = datos.Average(d => d.Value.venta);
+            decimal minimoCompra = datos.Min(d => d.Value.compra);
+            decimal maximoCompra = datos.Max(d => d.Value.compra);
+            decimal minimoVenta = datos.Min(d => d.Value.venta);
+            decimal maximoVenta = datos.Max(d => d.Value.venta);
+            DateTime fechaMinimoCompra = datos.First(d => d.Value.compra == minimoCompra).Key;
+            DateTime fechaMaximoCompra = datos.First(d => d.Value.compra == maximoCompra).Key;
+            DateTime fechaMinimoVenta = datos.First(d => d.Value.venta == minimoVenta).Key;
+            DateTime fechaMaximoVenta = datos.First(d => d.Value.venta == maximoVenta).Key;
+
+            Console.WriteLine($"\nTipo de cambio promedio compra: {promedioCompra:F2}");
+            Console.WriteLine($"Tipo de cambio promedio venta: {promedioVenta:F2}");
+            Console.WriteLine($"Tipo de cambio más bajo compra: {minimoCompra:F2} en {fechaMinimoCompra.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más alto compra: {maximoCompra:F2} en {fechaMaximoCompra.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más bajo venta: {minimoVenta:F2} en {fechaMinimoVenta.ToShortDateString()}");
+            Console.WriteLine($"Tipo de cambio más alto venta: {maximoVenta:F2} en {fechaMaximoVenta.ToShortDateString()}");
+        }
+    }
+
+    class AnalisisTrimestral : AnalisisTipoCambio
+    {
+        public AnalisisTrimestral(Dictionary<DateTime, (decimal compra, decimal venta)> historico)
+            : base(historico) { }
+
+        public override void RealizarAnalisis()
+        {
+            var registrosTrimestrales = tipoCambioHistorico.Where(r => r.Key >= DateTime.Now.AddMonths(-3)).ToList();
+            if (!registrosTrimestrales.Any())
+            {
+                Console.WriteLine("No hay datos disponibles para el análisis trimestral.");
+                return;
+            }
+
+            decimal promedioCompra = registrosTrimestrales.Average(r => r.Value.compra);
+            decimal promedioVenta = registrosTrimestrales.Average(r => r.Value.venta);
+            decimal minCompra = registrosTrimestrales.Min(r => r.Value.compra);
+            decimal maxCompra = registrosTrimestrales.Max(r => r.Value.compra);
+            decimal minVenta = registrosTrimestrales.Min(r => r.Value.venta);
+            decimal maxVenta = registrosTrimestrales.Max(r => r.Value.venta);
+
+            Console.WriteLine($"\nAnálisis Trimestral:");
+            Console.WriteLine($"Promedio Compra: {promedioCompra:F2}");
+            Console.WriteLine($"Promedio Venta: {promedioVenta:F2}");
+            Console.WriteLine($"Mínimo Compra: {minCompra:F2}, Máximo Compra: {maxCompra:F2}");
+            Console.WriteLine($"Mínimo Venta: {minVenta:F2}, Máximo Venta: {maxVenta:F2}");
+        }
+    }
+
+    class Program
+    {
+        static Dictionary<DateTime, decimal> tipoCambioHistorico = new Dictionary<DateTime, decimal>();
+        static decimal tipoCambioActual = 0;
+
+        static void Main()
+        {
+            try
+            {
+                CargarDatosDesdeExcel(@"C:\Users\taylo\Downloads\ExcelDatos.xlsx"); // Nombre del archivo Excel
+
+                while (true)
+                {
+                    Console.Clear();
+                    Console.WriteLine("Gestor de Tipo de Cambio");
+                    Console.WriteLine("1. Mostrar tipo de cambio del día");
+                    Console.WriteLine("2. Mostrar tipo de cambio de los últimos 11 años");
+                    Console.WriteLine("3. Realizar análisis de tipo de cambio");
+                    Console.WriteLine("4. Generar gráfico de tipo de cambio");
+                    Console.WriteLine("5. Análisis de tipo de cambio en rango de fechas");
+                    Console.WriteLine("6. Salir");
+                    Console.Write("Seleccione una opción: ");
+                    string opcion = Console.ReadLine();
+                    
+                    switch (opcion)
+                    {
+                        case "1": MostrarTipoCambioActual(); break;
+                        case "2": MostrarTipoCambioHistorico(); break;
+                        case "3": RealizarAnalisisTipoCambio(); break;
+                        case "4": GenerarGrafico(); break;
+                        case "5": AnalizarTipoCambioEnRangoFechas(); break;
+                        case "6": Console.WriteLine("Saliendo del programa..."); return;
+                        default: Console.WriteLine("Opción no válida. Intente de nuevo."); break;
+                    }
+
+                    Console.WriteLine("Presione cualquier tecla para continuar...");
+                    Console.ReadKey();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error crítico: {ex.Message}");
+                Console.WriteLine("El programa terminará.");
+                Console.ReadKey();
+            }
+        }
+
+        static void CargarDatosDesdeExcel(string ruta)
+        {
+            // Configurar encoding para leer el Excel
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            using (var stream = File.Open(ruta, FileMode.Open, FileAccess.Read))
+            using (var reader = ExcelReaderFactory.CreateReader(stream))
+            {
+                // Leer los años de la primera fila (encabezados)
+                reader.Read();
+                List<int> años = new List<int>();
+                for (int col = 1; col < reader.FieldCount; col++)
+                {
+                    if (int.TryParse(reader.GetValue(col)?.ToString(), out int año))
+                    {
+                        años.Add(año);
+                    }
+                }
+
+                // Leer las filas de datos
+                while (reader.Read())
+                {
+                    // Leer la fecha (primera columna)
+                    string fechaStr = reader.GetValue(0)?.ToString();
+                    if (string.IsNullOrEmpty(fechaStr)) continue;
+
+                    // Parsear la fecha (ej. "1 Ene" -> día 1, mes 1)
+                    var partesFecha = fechaStr.Split(' ');
+                    if (partesFecha.Length != 2) continue;
+
+                    if (!int.TryParse(partesFecha[0], out int dia)) continue;
+
+                    int mes = DateTime.ParseExact(partesFecha[1], "MMM", CultureInfo.CurrentCulture).Month;
+
+                    // Leer los valores para cada año
+                    for (int col = 1; col <= años.Count && col < reader.FieldCount; col++)
+                    {
+                        string valorStr = reader.GetValue(col)?.ToString();
+                        if (string.IsNullOrEmpty(valorStr)) continue;
+
+                        // Limpiar y convertir el valor numérico
+                        valorStr = valorStr.Replace(",", ".");
+                        if (decimal.TryParse(valorStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal valor))
+                        {
+                            try
+                            {
+                                DateTime fechaCompleta = new DateTime(años[col - 1], mes, dia);
+                                tipoCambioHistorico[fechaCompleta] = valor;
+                            }
+                            catch (ArgumentOutOfRangeException)
+                            {
+                                Console.WriteLine($"Fecha inválida: {dia} {partesFecha[1]} {años[col - 1]}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        static void MostrarTipoCambioActual()
+        {
+            Console.WriteLine(tipoCambioActual > 0
+                ? $"Tipo de cambio actual: {tipoCambioActual}"
+                : "No se ha establecido un tipo de cambio actual.");
+        }
+
+        static void MostrarTipoCambioHistorico()
+        {
+            Console.WriteLine("Mostrando tipo de cambio de los últimos 11 años...");
+            var onceAniosAtras = DateTime.Today.AddYears(-11);
+            var datosRecientes = tipoCambioHistorico
+                .Where(d => d.Key >= onceAniosAtras)
+                .OrderByDescending(d => d.Key);
+
+            foreach (var registro in datosRecientes)
+            {
+                Console.WriteLine($"{registro.Key.ToShortDateString()}: {registro.Value:F2}");
+            }
+        }
+
+        static void RealizarAnalisisTipoCambio()
+        {
+            Console.Write("Ingrese el número de días a analizar: ");
+            if (!int.TryParse(Console.ReadLine(), out int dias) || dias <= 0)
+            {
+                Console.WriteLine("Número de días no válido. Usando 30 por defecto.");
+                dias = 30;
+            }
+
+            var datos = tipoCambioHistorico.OrderByDescending(d => d.Key).Take(dias).ToList();
+            if (!datos.Any())
+            {
+                Console.WriteLine("No hay datos disponibles.");
+                return;
+            }
+
+            decimal promedio = datos.Average(d => d.Value);
+            decimal minimo = datos.Min(d => d.Value);
+            decimal maximo = datos.Max(d => d.Value);
+            DateTime fechaMinimo = datos.First(d => d.Value == minimo).Key;
+            DateTime fechaMaximo = datos.First(d => d.Value == maximo).Key;
+
+            Console.WriteLine($"\nAnálisis de los últimos {dias} días:");
+            Console.WriteLine($"Tipo de cambio promedio: {promedio:F2}");
+            Console.WriteLine($"Mínimo: {minimo:F2} en {fechaMinimo.ToShortDateString()}");
+            Console.WriteLine($"Máximo: {maximo:F2} en {fechaMaximo.ToShortDateString()}");
+        }
+
+        static void GenerarGrafico()
+        {
+            Console.WriteLine("Generando gráfico de tipo de cambio...");
+            var datosOrdenados = tipoCambioHistorico.OrderBy(d => d.Key).ToList();
+
+            double[] fechas = datosOrdenados.Select(d => d.Key.ToOADate()).ToArray();
+            double[] valores = datosOrdenados.Select(d => (double)d.Value).ToArray();
+
+            var plt = new Plot(1200, 800);
+            plt.AddScatter(fechas, valores);
+            plt.Title("Histórico de Tipo de Cambio");
+            plt.XLabel("Fecha");
+            plt.YLabel("Tipo de Cambio");
+            plt.XAxis.DateTimeFormat(true);
+
+            plt.SaveFig("tipo_cambio.png");
+            Console.WriteLine("Gráfico guardado como tipo_cambio.png");
+        }
+
+        static void AnalizarTipoCambioEnRangoFechas()
+        {
+            try
+            {
+                Console.Write("Ingrese fecha inicio (dd/MM/yyyy): ");
+                if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaInicio))
+                    throw new Exception("Fecha de inicio inválida.");
+
+                Console.Write("Ingrese fecha fin (dd/MM/yyyy): ");
+                if (!DateTime.TryParse(Console.ReadLine(), out DateTime fechaFin))
+                    throw new Exception("Fecha de fin inválida.");
+
+                if (fechaFin < fechaInicio)
+                    throw new Exception("La fecha de fin debe ser posterior a la de inicio.");
+
+                var datosEnRango = tipoCambioHistorico
+                    .Where(d => d.Key >= fechaInicio && d.Key <= fechaFin)
+                    .OrderBy(d => d.Key)
+                    .ToList();
+
+                if (!datosEnRango.Any())
+                {
+                    Console.WriteLine("No hay datos en el rango especificado.");
+                    return;
+                }
+
+                decimal promedio = datosEnRango.Average(d => d.Value);
+                decimal minimo = datosEnRango.Min(d => d.Value);
+                decimal maximo = datosEnRango.Max(d => d.Value);
+
+                Console.WriteLine($"\nAnálisis desde {fechaInicio.ToShortDateString()} hasta {fechaFin.ToShortDateString()}:");
+                Console.WriteLine($"Promedio: {promedio:F2}");
+                Console.WriteLine($"Mínimo: {minimo:F2}");
+                Console.WriteLine($"Máximo: {maximo:F2}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+}
