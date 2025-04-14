@@ -11,7 +11,6 @@ using System.Globalization;
 
 namespace GestorTipoCambio
 {
-    // Excepción personalizada para rango de fechas inválido
     public class RangoFechaInvalidoException : Exception
     {
         public RangoFechaInvalidoException(string mensaje) : base(mensaje) { }
@@ -140,7 +139,6 @@ namespace GestorTipoCambio
 
         static void CargarDatosDesdeExcel(string ruta)
         {
-            // Configurar encoding para leer el Excel
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             using (var stream = File.Open(ruta, FileMode.Open, FileAccess.Read))
@@ -157,14 +155,11 @@ namespace GestorTipoCambio
                     }
                 }
 
-                // Leer las filas de datos
                 while (reader.Read())
                 {
-                    // Leer la fecha (primera columna)
                     string fechaStr = reader.GetValue(0)?.ToString();
                     if (string.IsNullOrEmpty(fechaStr)) continue;
 
-                    // Parsear la fecha (ej. "1 Ene" -> día 1, mes 1)
                     var partesFecha = fechaStr.Split(' ');
                     if (partesFecha.Length != 2) continue;
 
@@ -172,13 +167,11 @@ namespace GestorTipoCambio
 
                     int mes = DateTime.ParseExact(partesFecha[1], "MMM", CultureInfo.CurrentCulture).Month;
 
-                    // Leer los valores para cada año
                     for (int col = 1; col <= años.Count && col < reader.FieldCount; col++)
                     {
                         string valorStr = reader.GetValue(col)?.ToString();
                         if (string.IsNullOrEmpty(valorStr)) continue;
 
-                        // Limpiar y convertir el valor numérico
                         valorStr = valorStr.Replace(",", ".");
                         if (decimal.TryParse(valorStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal valor))
                         {
