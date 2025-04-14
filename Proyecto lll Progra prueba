@@ -7,7 +7,7 @@ using ExcelDataReader;
 
 namespace GestorTipoCambio
 {
-    // Excepción personalizada para rango de fechas inválido
+    // personalizacion de fechas, para excepciones
     public class RangoFechaInvalidoException : Exception
     {
         public RangoFechaInvalidoException(string mensaje) : base(mensaje) { }
@@ -103,7 +103,7 @@ namespace GestorTipoCambio
                 Console.WriteLine("1. Mostrar tipo de cambio de compra y venta del día");
                 Console.WriteLine("2. Ingresar tipo de cambio del día");
                 Console.WriteLine("3. Actualizar tipo de cambio de uno de los últimos (x) días");
-                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 30 días");
+                Console.WriteLine("4. Mostrar tipo de cambio de los últimos 4015 días(seria lo mismo que 11 años)");
                 Console.WriteLine("5. Realizar análisis de tipo de cambio");
                 Console.WriteLine("6. Análisis trimestral de tipo de cambio");
                 Console.WriteLine("7. Generar gráfico de tipo de cambio");
@@ -142,7 +142,7 @@ namespace GestorTipoCambio
 
                 while (reader.Read())
                 {
-                    if (reader.Depth == 0) continue; // Saltar encabezado
+                    if (reader.Depth == 0) continue; // Saltar encabezado al siguiente
                     if (DateTime.TryParse(reader.GetValue(0)?.ToString(), out DateTime fecha) &&
                         decimal.TryParse(reader.GetValue(1)?.ToString(), out decimal compra) &&
                         decimal.TryParse(reader.GetValue(2)?.ToString(), out decimal venta))
@@ -240,17 +240,25 @@ namespace GestorTipoCambio
 
         static void MostrarTipoCambioHistorico()
         {
-            Console.WriteLine("Mostrando tipo de cambio de los últimos 30 días...");
-            foreach (var fecha in tipoCambioHistorico.OrderByDescending(d => d.Key).Take(30))
+            Console.WriteLine("Mostrando tipo de cambio de los últimos 11 años (aproximadamente 4015 días):");
+
+            var datos = tipoCambioHistorico
+                .Where(d => d.Key >= DateTime.Today.AddYears(-11))
+                .OrderByDescending(d => d.Key);
+
+            foreach (var fecha in datos)
             {
                 Console.WriteLine($"{fecha.Key.ToShortDateString()}: Compra: {fecha.Value.compra:F2}, Venta: {fecha.Value.venta:F2}");
             }
+
+            Console.WriteLine($"\nTotal de registros mostrados: {datos.Count()}");
         }
+
 
         static void InicializarHistorico()
         {
             DateTime fechaActual = DateTime.Today;
-            for (int i = 0; i < 90; i++)
+            for (int i = 0; i < 4015; i++)
             {
                 tipoCambioHistorico[fechaActual.AddDays(-i)] = (GenerarDato(), GenerarDato());
             }
