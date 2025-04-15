@@ -66,18 +66,12 @@ namespace GestorTipoCambio
                 Console.WriteLine("No hay datos disponibles para el análisis trimestral.");
                 return;
             }
-
-            decimal promedioCompra = registrosTrimestrales.Average(r => r.Value.compra);
             decimal promedioVenta = registrosTrimestrales.Average(r => r.Value.venta);
-            decimal minCompra = registrosTrimestrales.Min(r => r.Value.compra);
-            decimal maxCompra = registrosTrimestrales.Max(r => r.Value.compra);
             decimal minVenta = registrosTrimestrales.Min(r => r.Value.venta);
             decimal maxVenta = registrosTrimestrales.Max(r => r.Value.venta);
 
             Console.WriteLine($"\nAnálisis Trimestral:");
-            Console.WriteLine($"Promedio Compra: {promedioCompra:F2}");
-            Console.WriteLine($"Promedio Venta: {promedioVenta:F2}");
-            Console.WriteLine($"Mínimo Compra: {minCompra:F2}, Máximo Compra: {maxCompra:F2}");
+            Console.WriteLine($"Promedio Venta: {promedioVenta:F2}");;
             Console.WriteLine($"Mínimo Venta: {minVenta:F2}, Máximo Venta: {maxVenta:F2}");
         }
     }
