@@ -4,6 +4,8 @@ using System.Linq;
 using ScottPlot;
 using System.IO;
 using ExcelDataReader;
+using System.Diagnostics;
+using System.Xml.Linq;
 using System.Text;
 using System.Globalization;
 
@@ -39,21 +41,13 @@ namespace GestorTipoCambio
         public override void RealizarAnalisis()
         {
             var datos = tipoCambioHistorico.OrderByDescending(d => d.Key).Take(dias).ToList();
-            decimal promedioCompra = datos.Average(d => d.Value.compra);
             decimal promedioVenta = datos.Average(d => d.Value.venta);
-            decimal minimoCompra = datos.Min(d => d.Value.compra);
-            decimal maximoCompra = datos.Max(d => d.Value.compra);
             decimal minimoVenta = datos.Min(d => d.Value.venta);
             decimal maximoVenta = datos.Max(d => d.Value.venta);
-            DateTime fechaMinimoCompra = datos.First(d => d.Value.compra == minimoCompra).Key;
-            DateTime fechaMaximoCompra = datos.First(d => d.Value.compra == maximoCompra).Key;
             DateTime fechaMinimoVenta = datos.First(d => d.Value.venta == minimoVenta).Key;
             DateTime fechaMaximoVenta = datos.First(d => d.Value.venta == maximoVenta).Key;
 
-            Console.WriteLine($"\nTipo de cambio promedio compra: {promedioCompra:F2}");
             Console.WriteLine($"Tipo de cambio promedio venta: {promedioVenta:F2}");
-            Console.WriteLine($"Tipo de cambio más bajo compra: {minimoCompra:F2} en {fechaMinimoCompra.ToShortDateString()}");
-            Console.WriteLine($"Tipo de cambio más alto compra: {maximoCompra:F2} en {fechaMaximoCompra.ToShortDateString()}");
             Console.WriteLine($"Tipo de cambio más bajo venta: {minimoVenta:F2} en {fechaMinimoVenta.ToShortDateString()}");
             Console.WriteLine($"Tipo de cambio más alto venta: {maximoVenta:F2} en {fechaMaximoVenta.ToShortDateString()}");
         }
@@ -108,10 +102,11 @@ namespace GestorTipoCambio
                     Console.WriteLine("3. Realizar análisis de tipo de cambio");
                     Console.WriteLine("4. Generar gráfico de tipo de cambio");
                     Console.WriteLine("5. Análisis de tipo de cambio en rango de fechas");
-                    Console.WriteLine("6. Salir");
+                    Console.WriteLine("6. Analisis de tipo de cambio trimestral");
+                    Console.WriteLine("7. Salir");
                     Console.Write("Seleccione una opción: ");
                     string opcion = Console.ReadLine();
-                    
+
                     switch (opcion)
                     {
                         case "1": MostrarTipoCambioActual(); break;
@@ -119,7 +114,8 @@ namespace GestorTipoCambio
                         case "3": RealizarAnalisisTipoCambio(); break;
                         case "4": GenerarGrafico(); break;
                         case "5": AnalizarTipoCambioEnRangoFechas(); break;
-                        case "6": Console.WriteLine("Saliendo del programa..."); return;
+                        case "6": AnalizarTipoCambioTrimestral(); break;
+                        case "7": Console.WriteLine("Saliendo del programa..."); return;
                         default: Console.WriteLine("Opción no válida. Intente de nuevo."); break;
                     }
 
@@ -187,7 +183,15 @@ namespace GestorTipoCambio
                 }
             }
         }
+        static void AnalizarTipoCambioTrimestral()
+        {
+            var diccionarioAdaptado = tipoCambioHistorico.ToDictionary(
+            kv => kv.Key,
+            kv => (compra: kv.Value, venta: kv.Value));
 
+            AnalisisTrimestral analisisTrimestral = new AnalisisTrimestral(diccionarioAdaptado);
+            analisisTrimestral.RealizarAnalisis();
+        }
         static void MostrarTipoCambioActual()
         {
             Console.WriteLine(tipoCambioActual > 0
